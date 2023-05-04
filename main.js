@@ -20,6 +20,9 @@ const myFunctions = require("./SocketScripts/myFunctions");
 const port = process.env.PORT || 3000;
 io.on("connection", (socket) => {
   const token = socket.handshake.headers["token"];
+  socket.join("usergroup"); // usegroup
+  console.log(token);
+  socket.join(token); // user
 
   try {
     getUsers()
@@ -45,6 +48,37 @@ io.on("connection", (socket) => {
     socket.emit("error", err);
   }
 
+  socket.on("route-document-group", (data) => {
+    socket.to(data.group).emit("incoming-documents", data.document);
+  });
+
+  socket.on("route-document-user", (data) => {
+    socket.to(data.user).emit("incoming-documents", data.document);
+  });
+
+  socket.on("initiate-chat", (data) => {
+    const senderId = data.senderId;
+    const receiverId = data.receiverId;
+    const sortedIds = [senderId, receiverId].sort();
+    const chatRoomId = `${sortedIds[0]}_${sortedIds[1]}`;
+
+    senddata = { chatroom: chatRoomId };
+    socket.join(chatRoomId);
+    console.log(chatRoomId);
+    socket.to(data.receiverId).emit("chat-request", senddata);
+    //io.to(chatRoomId).emit("chat-initiated", chatRoomId);
+  });
+
+  socket.on("chat-initiate", (data) => {
+    console.log(data);
+    socket.join(data);
+  });
+
+  socket.on("private-chat", (data) => {
+    console.log(data);
+    socket.to(data.chatRoomId).emit("private-chat", data, data.chatRoomId);
+  });
+
   socket.on("online", async () => {
     try {
       const resultonline = await getUsers();
@@ -63,7 +97,6 @@ io.on("connection", (socket) => {
   socket.on("disconnect", async () => {
     try {
       const resultonline = await getUsers();
-      console.log("someone dc");
       let obj = resultonline.find((o, i) => {
         if (o.UserLogin === token) {
           return resultonline[i];
@@ -80,7 +113,7 @@ io.on("connection", (socket) => {
     try {
       console.log("[socket]", "leave room :", data);
       socket.leave(data.room);
-      socket.in(data.room).emit("new message", data.user);
+      // socket.in(data.room).emit("new message", data.user);
     } catch (e) {
       console.log("[error]", "leave room :", e);
       socket.emit("error", "couldnt perform requested action");
