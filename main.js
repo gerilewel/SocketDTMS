@@ -15,8 +15,10 @@ const myFunction = require("./SocketScripts/privatechat");
 const notifyuser = require("./SocketScripts/DocumentRouting");
 
 const UpdateStatus = require("./SQLScripts/UpdateOnline");
+const StoreChatMessages = require("./SQLScripts/sendchat");
+const retrievechats = require("./SQLScripts/retrievechats");
 const { getUsers, getGroups } = require("./SQLScripts/UserList");
-const myFunctions = require("./SocketScripts/myFunctions");
+// const myFunctions = require("./SocketScripts/myFunctions");
 const port = process.env.PORT || 3000;
 io.on("connection", (socket) => {
   const token = socket.handshake.headers["token"];
@@ -65,6 +67,7 @@ io.on("connection", (socket) => {
     senddata = { chatroom: chatRoomId };
     socket.join(chatRoomId);
     console.log(chatRoomId);
+    retrievechats(chatRoomId);
     socket.to(data.receiverId).emit("chat-request", senddata);
     //io.to(chatRoomId).emit("chat-initiated", chatRoomId);
   });
@@ -74,9 +77,9 @@ io.on("connection", (socket) => {
     socket.join(data);
   });
 
-  socket.on("private-chat", (data) => {
+  socket.on("private-chat", (data, data1) => {
     console.log(data);
-    socket.to(data.chatRoomId).emit("private-chat", data, data.chatRoomId);
+    socket.to(data1).emit("private-chat", data, data.chatRoomId);
   });
 
   socket.on("online", async () => {
